@@ -3,6 +3,7 @@ import { client } from '../..';
 import { CommandFile } from '../types';
 import GoodbyeSchema from '../../src/database/GoodbyeSchema';
 import log from '../../src/slash/auto/log';
+import MemberCountSchema from '../../src/database/MemberCountSchema';
 
 
 
@@ -23,6 +24,36 @@ export = {
        };
 
        if(result?.toggle === false) return;
+
+       const memberCount = await MemberCountSchema.findOne({
+        _id: member.guild.id,
+      });
+      if (memberCount) {
+        const countChannel = member.guild.channels.cache.get(memberCount.mChannelId);
+  
+          if (!countChannel) {
+              
+  
+              const error = new Discord.EmbedBuilder()
+              .setTitle("No Channel Found")
+              .setDescription(
+              `No Channel found for membercount. Please set it up using \`/set membercount membercountchannel\``
+              )
+              .setColor("Red")
+              .setTimestamp();
+      
+              log({ embeds: [error] });
+              return;
+          }
+          
+          if (memberCount.toggle === false) return;
+  
+          const num = member.guild.members.cache.filter(m => !m.user.bot).size;
+  
+          countChannel.edit({
+              name: `📊Members-${num}`,
+          })
+      }
 
        const channel = member.guild.channels.cache.get(result?.goodbyeChannelId || '123') as Discord.TextChannel;
 

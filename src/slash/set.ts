@@ -1,9 +1,11 @@
-import Discord, { CommandInteraction, ApplicationCommandOptionType, ChatInputCommandInteraction } from 'discord.js';
+import Discord, { CommandInteraction, ApplicationCommandOptionType, ChatInputCommandInteraction, PermissionOverwrites, PermissionFlagsBits } from 'discord.js';
 import { CommandFile } from '../types';
 import setWelcome from './setComands/setWelcome';
 import log from './auto/log';
 import setGoodbye from './setComands/setGoodbye';
 import setLogs from './setComands/setLogs';
+import MemberCountSchema from '../database/MemberCountSchema';
+import setMemberCount from './setComands/memberCount';
 
 export = {
     command: {
@@ -75,6 +77,16 @@ export = {
                 }]
             }]
 
+        }, {
+            name: 'membercount',
+            description: 'Set the membercount command',
+            type: ApplicationCommandOptionType.Subcommand,
+            options: [{
+                name: 'toggle',
+                description: 'Toggle the event',
+                type: ApplicationCommandOptionType.Boolean,
+                required: true
+            }]
         }],
     },
     permissions: [],
@@ -82,7 +94,8 @@ export = {
     ephemeral: true,
     callback: async (interaction: ChatInputCommandInteraction) => {
         
-        const subcommandGroup = interaction.options.getSubcommandGroup(true);
+        const subcommandGroup = interaction.options.getSubcommandGroup();
+        const subcommand = interaction.options.getSubcommand();
 
         const logEmbed = new Discord.EmbedBuilder()
         .setAuthor({name: `Set: ${subcommandGroup}`})
@@ -240,8 +253,39 @@ export = {
             responseEmbed.setDescription(`Successfully set the value for: \`\`\`${text}\`\`\``);
             logEmbed.setDescription(`**${interaction.user.username}** has set the value for: \`\`\`${text}\`\`\``);
             interaction.editReply({ embeds: [responseEmbed] });
-        }
+        } else if(subcommand === 'membercount') {
+            const isChannel = interaction.guild.channels.cache.find(c => c.name.includes('📊Members-'))
 
+            isChannel.delete()
+
+            const memberChannel = await interaction.guild.channels.create({
+                name: `📊Members-${interaction.guild.memberCount}`,
+                type: Discord.ChannelType.GuildText,
+                permissionOverwrites: [{
+                    id: interaction.guild.id,
+                    deny: ["SendMessages", "ReadMessageHistory"],
+                }]
+            });
+
+            const { data, error } = await setMemberCount.func({
+                guildId: interaction.guild.id,
+                channelId: memberChannel.id
+            })
+
+            if(error) {
+                responseEmbed
+                .setDescription(`Something went wrong: ${error}`)
+                .setColor('Red');
+
+                interaction.editReply({embeds: [responseEmbed]});
+                return
+            }
+
+            responseEmbed.setDescription(`Successfully set the value for: \`\`\`Member count channel has been set to ${data.channelId}\`\`\``);
+
+            interaction.editReply({ embeds: [responseEmbed] });
+            
+        }
 
 
         log({ embeds: [logEmbed] });

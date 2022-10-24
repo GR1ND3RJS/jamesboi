@@ -10,7 +10,7 @@ export = {
     callback: async (channel) => {
         const embed = new Discord.EmbedBuilder()
         .setTitle('Channel Created')
-        .setDescription(`A channel was created ${getUnixTime(Date.now())} in category ${channel.parent.name} with the name ${channel.name}`)
+        .setDescription(`A channel was created ${getUnixTime(Date.now())} ${channel.parent ? `in category ${channel.parent.name}` : ''}with the name ${channel.name}`)
         .setColor('Green')
         .setTimestamp();
 
